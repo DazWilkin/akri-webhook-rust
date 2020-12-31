@@ -90,4 +90,17 @@ cargo run -- \
 
 See the instructions for [Kubernetes](https://github.com/DazWilkin/akri-webhook#kubernetes) on [`akri-webhook`](https://github.com/DazWilkin/akri-webhook) the Golang implementation.
 
-The Kubernetes functionality is unchanged.
+The Kubernetes functionality is mostly unchanged. You'll need to ensure you use the correct image and you'll need to comment the `klog` flags referenced in the args (i.e. comment out or remove `--logtostderr` and `--v=2`):
+
+```YAML
+containers:
+- name: webhook
+    image: ghcr.io/dazwilkin/akri-webhook@[[CORRECT-SHA256]]
+    imagePullPolicy: Always
+    args:
+    - --tls-crt-file=/secrets/tls.crt
+    - --tls-key-file=/secrets/tls.key
+    - --port=8443
+#    - --logtostderr
+#    - --v=2
+```
