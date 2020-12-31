@@ -1,7 +1,7 @@
-use actix_web::{post, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
-use akri_shared::akri::configuration::Configuration;
+use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
+use akri_shared::akri::configuration::KubeAkriConfig;
 use clap::Arg;
-// use k8s_openapi::apimachinery::pkg::apis::meta::v1;
+use k8s_openapi::apimachinery::pkg::runtime::RawExtension;
 use openapi::models::{
     V1AdmissionRequest as AdmissionRequest, V1AdmissionResponse as AdmissionResponse,
     V1AdmissionReview as AdmissionReview, V1Status as Status,
@@ -9,7 +9,6 @@ use openapi::models::{
 use openssl::ssl::{SslAcceptor, SslAcceptorBuilder, SslFiletype, SslMethod};
 use rustls::internal::pemfile::{certs, rsa_private_keys};
 use rustls::{NoClientAuth, ServerConfig};
-
 use serde_json::Value;
 use std::fs::File;
 
@@ -105,41 +104,66 @@ fn check(
     }
 }
 
-fn validateConfiguration(rqst: &AdmissionRequest) -> AdmissionResponse {
-    let resp = AdmissionResponse::new(false, rqst.uid);
-
-    match rqst.object {
+fn validate_configuration(rqst: &AdmissionRequest) -> AdmissionResponse {
+    match &rqst.object {
         Some(raw) => {
+            // RawExtension represents the embedded request
+            let x: RawExtension = serde_json::from_value(raw.clone()).expect("RawExtension");
+            // TODO(dazwilkin) Is there a more direct way to convert this? pkg/convert ??
+            // Marshal it back to a string
+            let y = serde_json::to_string(&x).expect("success");
+            println!("{}", y);
             // Unmarshal `raw` into Akri Configuration
-            let c: Configuration = serde_json::from_str(&raw.to_string()[..]).expect("valid JSON");
+            let c: KubeAkriConfig = serde_json::from_str(y.as_str()).expect("success");
             // Marshal it back to bytes
             let reserialized = serde_json::to_string(&c).expect("bytes");
             // Unmarshal the result to untyped (Value)
             let deserialized: Value = serde_json::from_str(&reserialized).expect("untyped JSON");
 
             // Unmarshal `raw` into untyped (Value)
-            let v: Value = serde_json::from_str(&raw.to_string()[..]).expect("Valid JSON");
+            let v: Value = serde_json::from_value(raw.clone()).expect("RawExtension");
 
             // Do they match?
             match check(&v, &deserialized) {
-                Ok(x) => {
-                    resp.allowed = true;
-                    resp
-                }
-                Err(e) => {
-                    let status = Status::new();
-                    status.message = Some("AdmissionRequest object contains no data".to_owned());
-                    resp.status = Some(status);
-                    resp
-                }
+                Ok(_) => AdmissionResponse::new(true, rqst.uid.to_owned()),
+                Err(e) => AdmissionResponse {
+                    allowed: false,
+                    audit_annotations: None,
+                    patch: None,
+                    patch_type: None,
+                    status: Some(Status {
+                        api_version: None,
+                        code: None,
+                        details: None,
+                        kind: None,
+                        message: Some(e.to_string()),
+                        metadata: None,
+                        reason: None,
+                        status: None,
+                    }),
+                    uid: rqst.uid.to_owned(),
+                    warnings: None,
+                },
             }
         }
-        None => {
-            let status = Status::new();
-            status.message = Some("AdmissionRequest object contains no data".to_owned());
-            resp.status = Some(status);
-            return resp;
-        }
+        None => AdmissionResponse {
+            allowed: false,
+            audit_annotations: None,
+            patch: None,
+            patch_type: None,
+            status: Some(Status {
+                api_version: None,
+                code: None,
+                details: None,
+                kind: None,
+                message: Some("AdmissionRequest object contains no data".to_owned()),
+                metadata: None,
+                reason: None,
+                status: None,
+            }),
+            uid: rqst.uid.to_owned(),
+            warnings: None,
+        },
     }
 }
 
@@ -147,7 +171,7 @@ fn validateConfiguration(rqst: &AdmissionRequest) -> AdmissionResponse {
 async fn validate(rqst: web::Json<AdmissionReview>) -> impl Responder {
     match &rqst.request {
         Some(rqst) => {
-            let resp = validateConfiguration(&rqst);
+            let resp = validate_configuration(&rqst);
             let resp = serde_json::to_string(&resp).expect("valid");
             return HttpResponse::Ok().body(resp);
         }
