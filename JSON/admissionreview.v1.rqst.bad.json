@@ -1,0 +1,119 @@
+{
+    "kind": "AdmissionReview",
+    "apiVersion": "admission.k8s.io/v1",
+    "request": {
+        "uid": "2b752327-a529-4ffd-b2e2-478455e80a0d",
+        "kind": {
+            "group": "akri.sh",
+            "version": "v0",
+            "kind": "Configuration"
+        },
+        "resource": {
+            "group": "akri.sh",
+            "version": "v0",
+            "resource": "configurations"
+        },
+        "requestKind": {
+            "group": "akri.sh",
+            "version": "v0",
+            "kind": "Configuration"
+        },
+        "requestResource": {
+            "group": "akri.sh",
+            "version": "v0",
+            "resource": "configurations"
+        },
+        "name": "webthings",
+        "namespace": "default",
+        "operation": "CREATE",
+        "userInfo": {
+            "username": "admin",
+            "uid": "admin",
+            "groups": [
+                "system:masters",
+                "system:authenticated"
+            ]
+        },
+        "object": {
+            "apiVersion": "akri.sh/v0",
+            "kind": "Configuration",
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"akri.sh/v0\",\"kind\":\"Configuration\",\"metadata\":{\"annotations\":{},\"name\":\"webthings\",\"namespace\":\"default\"},\"spec\":{\"brokerPodSpec\":{\"containers\":[{\"image\":\"ghcr.io/dazwilkin/zeroconf-broker@sha256:69810b622d37d0a9a544955d4d4c53f16fec6b8d32a111740f4503dcc164fcf0\",\"name\":\"zeroconf-broker\",\"resources\":{\"limits\":{\"{{PLACEHOLDER}}\":\"1\"}}}],\"imagePullSecrets\":[{\"name\":\"ghcr\"}]},\"capacity\":1,\"protocol\":{\"zeroconf\":{\"kind\":\"_webthing._tcp\",\"port\":8888}}}}\n"
+                },
+                "creationTimestamp": "2020-12-30T17:47:26Z",
+                "generation": 1,
+                "managedFields": [
+                    {
+                        "apiVersion": "akri.sh/v0",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:metadata": {
+                                "f:annotations": {
+                                    ".": {},
+                                    "f:kubectl.kubernetes.io/last-applied-configuration": {}
+                                }
+                            },
+                            "f:spec": {
+                                ".": {},
+                                "f:brokerPodSpec": {
+                                    ".": {},
+                                    "f:containers": {},
+                                    "f:imagePullSecrets": {}
+                                },
+                                "f:capacity": {},
+                                "f:protocol": {
+                                    ".": {},
+                                    "f:zeroconf": {
+                                        ".": {},
+                                        "f:kind": {},
+                                        "f:port": {}
+                                    }
+                                }
+                            }
+                        },
+                        "manager": "kubectl",
+                        "operation": "Update",
+                        "time": "2020-12-30T17:47:26Z"
+                    }
+                ],
+                "name": "webthings",
+                "namespace": "default",
+                "uid": "b61d7604-97f0-46a3-adb2-adc0dedfb0c9"
+            },
+            "spec": {
+                "brokerPodSpec": {
+                    "containers": [
+                        {
+                            "image": "ghcr.io/dazwilkin/zeroconf-broker@sha256:69810b622d37d0a9a544955d4d4c53f16fec6b8d32a111740f4503dcc164fcf0",
+                            "name": "zeroconf-broker"
+                        }
+                    ],
+                    "resources": {
+                        "limits": {
+                            "{{PLACEHOLDER}}": "1"
+                        }
+                    },
+                    "imagePullSecrets": [
+                        {
+                            "name": "ghcr"
+                        }
+                    ]
+                },
+                "capacity": 1,
+                "protocol": {
+                    "zeroconf": {
+                        "kind": "_webthing._tcp",
+                        "port": 8888
+                    }
+                }
+            }
+        },
+        "oldObject": null,
+        "dryRun": false,
+        "options": {
+            "kind": "CreateOptions",
+            "apiVersion": "meta.k8s.io/v1"
+        }
+    }
+}
