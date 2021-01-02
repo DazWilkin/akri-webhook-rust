@@ -38,9 +38,22 @@ fn check(
     v: &serde_json::Value,
     deserialized: &serde_json::Value,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    if deserialized == &serde_json::Value::Null {
+        return Err(None.ok_or(format!("no matching value in `deserialized`"))?);
+    }
+
     match v {
         serde_json::Value::Object(o) => {
             for (key, value) in o {
+                println!("[check] key: {}", key);
+                if key == "creationTimestamp" {
+                    println!("[check] creationTimestamp deserialized: {:?}", deserialized);
+                    return Ok(());
+                }
+                if key == "resources" {
+                    println!("[check] resources deserialized: {:?}", deserialized);
+                    return Ok(());
+                }
                 if let Err(e) = check(&value, &deserialized[key]) {
                     return Err(None.ok_or(format!(
                         "input key ({:?}) not equal to parsed: ({:?})",
@@ -112,7 +125,6 @@ fn validate_configuration(rqst: &AdmissionRequest) -> AdmissionResponse {
             // TODO(dazwilkin) Is there a more direct way to convert this? pkg/convert ??
             // Marshal it back to a string
             let y = serde_json::to_string(&x).expect("success");
-            println!("{}", y);
             // Unmarshal `raw` into Akri Configuration
             let c: KubeAkriConfig = serde_json::from_str(y.as_str()).expect("success");
             // Marshal it back to bytes
@@ -172,8 +184,14 @@ async fn validate(rqst: web::Json<AdmissionReview>) -> impl Responder {
     match &rqst.request {
         Some(rqst) => {
             let resp = validate_configuration(&rqst);
-            let resp = serde_json::to_string(&resp).expect("valid");
-            return HttpResponse::Ok().body(resp);
+            let resp: AdmissionReview = AdmissionReview {
+                api_version: Some("admission.k8s.io/v1".to_owned()),
+                kind: Some("AdmissionReview".to_owned()),
+                request: None,
+                response: Some(resp),
+            };
+            let body = serde_json::to_string(&resp).expect("Valid AdmissionReview");
+            return HttpResponse::Ok().body(body);
         }
         None => {
             return HttpResponse::BadRequest().body("");
@@ -204,6 +222,18 @@ async fn main() -> std::io::Result<()> {
                 .takes_value(true)
                 .about("Webhook port"),
         )
+        .arg(
+            Arg::new("logtostderr")
+                .long("logtostderr")
+                .takes_value(false)
+                .about("Redundant: included for consistency with Golang variant"),
+        )
+        .arg(
+            Arg::new("v")
+                .long("v")
+                .takes_value(true)
+                .about("Redudnant: included for consistency with Golang variant"),
+        )
         .get_matches();
 
     let crt_file = matches.value_of("crt_file").expect("TLS certificate file");
@@ -214,6 +244,11 @@ async fn main() -> std::io::Result<()> {
         .unwrap_or("8443")
         .parse::<u16>()
         .expect("valid port [0-65535]");
+
+    // Debugging :-(
+    // let crt_file = "/home/dazwilkin/Projects/akri/webhook/rust/akri-webhook/secrets/localhost.crt";
+    // let key_file = "/home/dazwilkin/Projects/akri/webhook/rust/akri-webhook/secrets/localhost.key";
+    // let port: u16 = 8443;
 
     let endpoint = format!("0.0.0.0:{}", port);
     println!("Started HTTPd: {}", endpoint);
