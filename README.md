@@ -64,8 +64,9 @@ fn validate_configuration(rqst: &AdmissionRequest) -> AdmissionResponse {
 ## Certificate
 
 ```bash
-DIR=${PWD}/secrets
-FILENAME=${DIR}/localhost
+DIR="${PWD}/secrets"
+SERVICE="localhost"
+FILENAME="${DIR}/${SERVICE}"
 
 openssl req \
 -x509 \
@@ -80,10 +81,52 @@ openssl req \
 ## Run
 
 ```bash
+PORT="8443"
+
 cargo run -- \
   --tls-crt-file=${FILENAME}.crt \
   --tls-key-file=${FILENAME}.key \
-  --port=8443
+  --port=${PORT}
+```
+
+## Docker
+
+```bash
+PORT="8443"
+
+docker run \
+--rm --interactive --tty \
+--volume=${PWD}/secrets:/secrets \
+--publish=8443:8443 \
+ghcr.io/dazwilkin/akri-webhook:$(git rev-parse HEAD) \
+  --tls-crt-file=/secrets/${SERVICE}.crt \
+  --tls-key-file=/secrets/${SERVICE}.key \
+  --port=${PORT}
+```
+
+## Test
+
+Then, from another shell:
+
+```bash
+DIR="${PWD}/secrets"
+SERVICE="localhost"
+FILENAME="${DIR}/${SERVICE}"
+PORT="8443"
+
+for TEST in "good" "bad"
+do
+   RESP=$(curl \
+   --silent \
+   --insecure \
+   --cert ${FILENAME}.crt \
+   --key ${FILENAME}.key \
+   --request POST \
+   --header "Content-Type: application/json" \
+   --data "@./JSON/admissionreview.v1.rqst.${TEST}.json" \
+   https://localhost:${PORT}/validate)
+   printf "${TEST}: ${RESP}\n"
+done
 ```
 
 ## Kubernetes
@@ -103,4 +146,33 @@ containers:
     - --port=8443
 #    - --logtostderr
 #    - --v=2
+```
+
+## Debugging
+
+```bash
+kubectl run dnsutils \
+--rm \
+--stdin \
+--tty \
+--image=gcr.io/kubernetes-e2e-test-images/dnsutils:1.3 \
+-- sh
+nslookup ${SERVICE}.${NAMESPACE}.svc
+```
+
+Should resolve and should match:
+
+```bash
+ENDPOINT=$(\
+  kubectl get service/${SERVICE} \
+  --namespace=${NAMESPACE} \
+  --output=jsonpath="{.spec.clusterIP}") && echo ${ENDPOINT}
+```
+
+And:
+
+```bash
+openssl s_client \
+-connect ${ENDPOINT} \
+--servername ${SERVICE}.${NAMESPACE}.svc
 ```
