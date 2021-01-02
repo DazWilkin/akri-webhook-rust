@@ -1,0 +1,32 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: SERVICE
+  namespace: NAMESPACE
+  labels:
+    project: akri
+    component: webhook
+    language: rust
+webhooks:
+  - name: SERVICE.NAMESPACE.svc
+    clientConfig:
+      service:
+        name: SERVICE
+        namespace: NAMESPACE
+        port: 443
+        path: "/validate"
+      caBundle: CABUNDLE
+    rules:
+      - operations:
+          - "CREATE"
+          - "UPDATE"
+        apiGroups:
+          - "akri.sh"
+        apiVersions:
+          - "v0"
+        resources:
+          - "configurations"
+        scope: "*"
+    admissionReviewVersions:
+      - v1
+    sideEffects: None

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: SERVICE
+  namespace: NAMESPACE
+  labels:
+    project: akri
+    component: webhook
+    language: rust
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      project: akri
+      component: webhook
+  template:
+    metadata:
+      labels:
+        project: akri
+        component: webhook
+    spec:
+      imagePullSecrets:
+        - name: ghcr
+      containers:
+        - name: webhook
+          image: ghcr.io/dazwilkin/akri-webhook:rust
+          imagePullPolicy: Always
+          args:
+            - --tls-crt-file=/secrets/tls.crt
+            - --tls-key-file=/secrets/tls.key
+            - --port=8443
+            - --logtostderr
+            - -v=2
+          volumeMounts:
+            - name: secrets
+              mountPath: /secrets
+              readOnly: true
+      volumes:
+        - name: secrets
+          secret:
+            secretName: SERVICE
