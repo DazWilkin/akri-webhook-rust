@@ -50,10 +50,6 @@ fn check(
                     println!("[check] creationTimestamp deserialized: {:?}", deserialized);
                     return Ok(());
                 }
-                if key == "resources" {
-                    println!("[check] resources deserialized: {:?}", deserialized);
-                    return Ok(());
-                }
                 if let Err(e) = check(&value, &deserialized[key]) {
                     return Err(None.ok_or(format!(
                         "input key ({:?}) not equal to parsed: ({:?})",
@@ -129,6 +125,7 @@ fn validate_configuration(rqst: &AdmissionRequest) -> AdmissionResponse {
             let c: KubeAkriConfig = serde_json::from_str(y.as_str()).expect("success");
             // Marshal it back to bytes
             let reserialized = serde_json::to_string(&c).expect("bytes");
+            println!("researialized: {:?}", reserialized);
             // Unmarshal the result to untyped (Value)
             let deserialized: Value = serde_json::from_str(&reserialized).expect("untyped JSON");
 
